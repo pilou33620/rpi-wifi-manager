@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuration Wi-Fi Raspberry Pi</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f2f2f7;
+            margin: 0;
+            padding: 20px;
+            color: #1c1c1e;
+        }
+        .card {
+            background: #ffffff;
+            border-radius: 14px;
+            padding: 24px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            max-width: 420px;
+            margin: 20px auto;
+            box-sizing: border-box;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        h1 {
+            font-size: 1.3rem;
+            margin: 0;
+        }
+        .btn-refresh {
+            background: none;
+            border: 1px solid #c7c7cc;
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            color: #007aff;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-refresh:hover {
+            background-color: #f2f2f7;
+        }
+        .wifi-list {
+            margin: 15px 0;
+            max-height: 240px;
+            overflow-y: auto;
+            border: 1px solid #e5e5ea;
+            border-radius: 10px;
+        }
+        .wifi-item {
+            padding: 12px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #f2f2f7;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+        }
+        .wifi-item:last-child {
+            border-bottom: none;
+        }
+        .wifi-item:hover {
+            background-color: #f2f8ff;
+        }
+        .wifi-item.selected {
+            background-color: #e5f1fb;
+            border-left: 4px solid #007aff;
+        }
+        .wifi-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            overflow: hidden;
+        }
+        .wifi-ssid {
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .signal {
+            font-size: 0.8rem;
+            color: #8e8e93;
+        }
+        .badge {
+            font-size: 0.72rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+        .badge-sec {
+            background-color: #f2f2f7;
+            color: #48484a;
+        }
+        .badge-open {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        label {
+            display: block;
+            margin-top: 14px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: #3a3a3c;
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 10px 12px;
+            margin-top: 6px;
+            border: 1px solid #c7c7cc;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 0.95rem;
+            transition: border-color 0.2s;
+        }
+        input[type="text"]:focus, input[type="password"]:focus {
+            outline: none;
+            border-color: #007aff;
+        }
+        .password-container {
+            position: relative;
+        }
+        .toggle-pwd {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-25%);
+            background: none;
+            border: none;
+            font-size: 0.8rem;
+            color: #007aff;
+            cursor: pointer;
+            padding: 4px;
+        }
+        .btn-submit {
+            width: 100%;
+            background-color: #007aff;
+            color: white;
+            border: none;
+            padding: 13px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            margin-top: 22px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .btn-submit:hover {
+            background-color: #0062cc;
+        }
+        .alert {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            padding: 16px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        .btn-back {
+            display: inline-block;
+            margin-top: 18px;
+            padding: 10px 18px;
+            background-color: #ffffff;
+            color: #007aff;
+            border: 1px solid #007aff;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .empty-state {
+            padding: 24px;
+            text-align: center;
+            color: #8e8e93;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="header">
+            <h1>Wi-Fi Raspberry Pi</h1>
+            {% if not connecting %}
+                <a href="/" class="btn-refresh" title="Actualiser la liste">Actualiser</a>
+            {% endif %}
+        </div>
+
+        {% if connecting %}
+            <div class="alert">
+                Connexion en cours à <strong>{{ target_ssid }}</strong>...<br><br>
+                Le partage de connexion ou point d'accès va se couper si la carte bascule sur le nouveau réseau.
+                <br>
+                <a href="/" class="btn-back">&larr; Retour à la liste</a>
+            </div>
+        {% else %}
+            <form action="/connect" method="POST">
+                <label>Réseaux détectés :</label>
+                <div class="wifi-list" id="wifiList">
+                    {% for net in networks %}
+                        <div class="wifi-item" data-ssid="{{ net.ssid }}" onclick="selectWifi(this)">
+                            <div class="wifi-info">
+                                <span class="wifi-ssid">{{ net.ssid }}</span>
+                                <span class="signal">{{ net.signal }}%</span>
+                            </div>
+                            <div>
+                                {% if net.is_secured %}
+                                    <span class="badge badge-sec">&#128274; {{ net.security }}</span>
+                                {% else %}
+                                    <span class="badge badge-open">Libre</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="empty-state">Aucun réseau Wi-Fi trouvé. Cliquez sur Actualiser.</div>
+                    {% endfor %}
+                </div>
+
+                <label for="ssid">Réseau sélectionné :</label>
+                <input type="text" id="ssid" name="ssid" required placeholder="Nom du réseau (SSID)">
+
+                <label for="password">Mot de passe :</label>
+                <div class="password-container">
+                    <input type="password" id="password" name="password" placeholder="Clé de sécurité (vide si réseau libre)">
+                    <button type="button" class="toggle-pwd" onclick="togglePasswordVisibility()">Voir</button>
+                </div>
+
+                <button type="submit" class="btn-submit">Se connecter</button>
+            </form>
+        {% endif %}
+    </div>
+
+    <script>
+        function selectWifi(element) {
+            const items = document.querySelectorAll('.wifi-item');
+            items.forEach(item => item.classList.remove('selected'));
+            if (element) {
+                element.classList.add('selected');
+                const ssid = element.getAttribute('data-ssid');
+                document.getElementById('ssid').value = ssid;
+                document.getElementById('password').focus();
+            }
+        }
+
+        function togglePasswordVisibility() {
+            const pwdInput = document.getElementById('password');
+            const btn = document.querySelector('.toggle-pwd');
+            if (pwdInput.type === 'password') {
+                pwdInput.type = 'text';
+                btn.textContent = 'Masquer';
+            } else {
+                pwdInput.type = 'password';
+                btn.textContent = 'Voir';
+            }
+        }
+    </script>
+</body>
+</html>
